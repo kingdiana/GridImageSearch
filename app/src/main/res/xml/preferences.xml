@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <EditTextPreference
+        android:title="@string/pref_site_label"
+        android:key="@string/pref_site_key"
+        android:defaultValue="@string/pref_site_default"
+        android:inputType="text"
+        android:singleLine="true" />
+    <ListPreference
+        android:title="@string/pref_size_label"
+        android:key="@string/pref_size_key"
+        android:defaultValue="@string/pref_size_default"
+        android:entries="@array/pref_size_options"
+        android:entryValues="@array/pref_size_values" />
+    <ListPreference
+        android:title="@string/pref_color_label"
+        android:key="@string/pref_color_key"
+        android:defaultValue="@string/pref_color_default"
+        android:entries="@array/pref_color_options"
+        android:entryValues="@array/pref_color_values" />
+    <ListPreference
+        android:title="@string/pref_type_label"
+        android:key="@string/pref_type_key"
+        android:defaultValue="@string/pref_type_default"
+        android:entries="@array/pref_type_options"
+        android:entryValues="@array/pref_type_values" />
+</PreferenceScreen>
