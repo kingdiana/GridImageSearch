@@ -7,7 +7,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridView;
 
@@ -27,9 +29,12 @@ import java.util.ArrayList;
 
 public class SearchActivity extends ActionBarActivity {
     private EditText etQuery;
+    private String previousQuery = "";
     private GridView gvResults;
+    private Button btnSearch;
     private ArrayList<ImageResult> imageResult;
     private ImageResultsAdapter aImageResults;
+    int count = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,11 +44,39 @@ public class SearchActivity extends ActionBarActivity {
         imageResult = new ArrayList<ImageResult>();
         aImageResults = new ImageResultsAdapter(this, imageResult);
         gvResults.setAdapter(aImageResults);
+
+        gvResults.setOnScrollListener(new AbsListView.OnScrollListener() {
+            private int currentScrollState = 0;
+            private int currentVisibleItemCount = 0;
+            private int currentFirstVisibleItem = 0;
+
+            private void isScrollCompleted() {
+                if (this.currentVisibleItemCount > 0 && this.currentScrollState == SCROLL_STATE_IDLE) {
+                    /* Scroll has completed, do the work. */
+                    onImageSearch(getCurrentFocus());
+                }
+            }
+
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+                //Log.d(">>>>>>>>>>>", "onScrollStateChanged");
+                this.currentScrollState = scrollState;
+                this.isScrollCompleted();
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                //Log.d(">>>>>>>>>>>", "onScroll");
+                this.currentFirstVisibleItem = firstVisibleItem;
+                this.currentVisibleItemCount = visibleItemCount;
+            }
+        });
     }
 
     private void setupViews() {
         etQuery = (EditText) findViewById(R.id.etQuery);
         gvResults = (GridView) findViewById(R.id.gvResults);
+        btnSearch = (Button) findViewById(R.id.btnSearch);
         gvResults.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -63,25 +96,34 @@ public class SearchActivity extends ActionBarActivity {
     }
 
     public void onImageSearch(View v) {
-        String query = etQuery.getText().toString();
-        //Toast.makeText(this, "Search for: " + query, Toast.LENGTH_SHORT).show();
-
+        final String query = etQuery.getText().toString();
+        if (!query.contentEquals(previousQuery)) {
+            count = 0;
+            previousQuery = query;
+            aImageResults.clear();
+        }
         AsyncHttpClient client = new AsyncHttpClient();
         // https://ajax.googleapis.com/ajax/services/search/images?v=1.0&q=android&rsz=8
         String url = "https://ajax.googleapis.com/ajax/services/search/images?v=1.0&q=" +
-                     query + "&rsz=8";
+                     query + "&rsz=8&start=" + count;
         client.get(url, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                Log.d("DEBUG", response.toString());
-                try {
-                    JSONArray imageResultJson = response.getJSONObject("responseData").getJSONArray("results");
-                    imageResult.clear();
-                    aImageResults.addAll(ImageResult.fromJSONArray(imageResultJson));
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                if (count < 64) {  // api limits results to 64 total
+                    Log.d("DEBUG", response.toString());
+                    try {
+                        JSONObject jsonObject = response.getJSONObject("responseData");
+                        JSONArray imageResultJson = jsonObject.getJSONArray("results");
+                        aImageResults.addAll(ImageResult.fromJSONArray(imageResultJson));
+                        count += imageResultJson.length();
+
+                        if (count < 16 && imageResultJson.length() >= 8) {
+                            btnSearch.callOnClick();
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
                 }
-                Log.i("INFO", imageResult.toString());
             }
         });
     }
